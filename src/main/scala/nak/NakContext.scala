@@ -18,12 +18,16 @@ package nak
 
 import nak.core._
 import nak.data._
-import nak.liblinear.{Model => LiblinearModel, LiblinearConfig, LiblinearTrainer}
+import nak.liblinear.{Model => LiblinearModel, LiblinearConfig, LiblinearTrainer, Linear}
 import nak.liblinear.LiblinearUtil._
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable.HashMap
 import scala.io.Source
-import java.io.{File,BufferedReader,FileReader}
+import java.io.{File,BufferedReader,FileReader,FileInputStream,FileOutputStream}
+
+import sjson.json._
+
 
 /**
  * An object that provides common functions needed for using Nak.
@@ -151,6 +155,68 @@ object NakContext {
       examples.map(ex => (ex.label, ex.features.map(_.tuple).toSeq)).toSeq.unzip
     val observations = createLiblinearMatrix(observationsAsTuples)
     new LiblinearTrainer(config)(responses.map(_.toDouble).toArray, observations, numFeatures)
+  }
+
+  def saveClassifier[I](classifier: IndexedClassifier[String] with FeaturizedClassifier[String, I], path: String, classifierName: String) = {
+
+    val modelFile = new File(path, classifierName + ".model")
+    val fmapFile = new File(path, classifierName + ".fmap")
+    val lmapFile = new File(path, classifierName + ".lmap")
+
+    val serializer = Serializer.SJSON
+
+    val fmapStream = new FileOutputStream(fmapFile)
+    val lmapStream = new FileOutputStream(lmapFile)
+    
+    Linear.saveModel(modelFile, classifier.asInstanceOf[LiblinearClassifier].model)
+    fmapStream.write(serializer.out(classifier.asInstanceOf[LiblinearClassifier].fmap))
+    lmapStream.write(serializer.out(classifier.asInstanceOf[LiblinearClassifier].lmap))
+
+    fmapStream.close()
+    lmapStream.close()
+
+  }
+
+  def loadClassifier[I](path: String, classifierName: String, featurizer: Featurizer[I,String]) = {
+
+    val model = Linear.loadModel(new File(path, classifierName + ".model"))
+
+    var fmapRaw = new Array[Byte](0)
+    var lmapRaw = new Array[Byte](0)
+
+    val fmapFile = new FileInputStream(new File(path, classifierName + ".fmap"))
+    val lmapFile = new FileInputStream(new File(path, classifierName + ".lmap"))
+
+    val serializer = Serializer.SJSON
+
+    var readIn: Int = 0
+    var buffer = new Array[Byte](10240)
+    readIn = fmapFile.read(buffer)
+    while (readIn != -1) {
+        fmapRaw = Array.concat(fmapRaw, buffer.slice(0, readIn))
+        readIn = fmapFile.read(buffer)
+    }
+    readIn = lmapFile.read(buffer)
+    while (readIn != -1) {
+        lmapRaw = Array.concat(lmapRaw, buffer.slice(0, readIn))
+        readIn = lmapFile.read(buffer)
+    }                               
+
+    fmapFile.close()
+    lmapFile.close()
+
+    // Deal with sjson bug temporarily
+
+    val fmapBigDecimal = serializer.in[Map[String, BigDecimal]](fmapRaw)
+    val lmapBigDecimal = serializer.in[Map[String, BigDecimal]](lmapRaw)
+
+    val fmap: HashMap[String, Int] = new HashMap[String, Int]()
+    val lmap: HashMap[String, Int] = new HashMap[String, Int]()
+
+    fmapBigDecimal.foreach((x) => fmap += x._1 -> x._2.toInt)
+    lmapBigDecimal.foreach((x) => lmap += x._1 -> x._2.toInt)
+    
+    Classifier(model, lmap.toMap, fmap.toMap, featurizer)
   }
 
 

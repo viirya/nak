@@ -16,7 +16,8 @@ libraryDependencies ++= Seq(
   "org.rogach" %% "scallop" % "0.8.1",
   "commons-logging" % "commons-logging" % "1.1.1",
   "log4j" % "log4j" % "1.2.16",
-  "gov.nist.math" % "jama" % "1.0.2"
+  "gov.nist.math" % "jama" % "1.0.2",
+  "net.debasishg" % "sjson_2.10" % "0.19"  
 )
 
 publishTo <<= version { v: String =>

@@ -49,14 +49,23 @@ object TwentyNewsGroupsExample {
     // Example stopword set (you should use a more extensive list for actual classifiers).
     val stopwords = Set("the","a","an","of","in","for","by","on")
 
-    // Train
-    print("Training... ")
-    val trainDir = new File(newsgroupsDir, "20news-bydate-train")
-    val trainingExamples = fromLabeledDirs(trainDir).toList
-    val config = LiblinearConfig(cost=5.0)
+    var classifier: IndexedClassifier[String] with FeaturizedClassifier[String, String] = null
     val featurizer = new BowFeaturizer(stopwords)
-    val classifier = trainClassifier(config, featurizer, trainingExamples)
-    println("done.")
+    if (args.length < 2) {
+      // Train
+      print("Training... ")
+      val trainDir = new File(newsgroupsDir, "20news-bydate-train")
+      val trainingExamples = fromLabeledDirs(trainDir).toList
+      val config = LiblinearConfig(cost=5.0)
+      classifier = trainClassifier(config, featurizer, trainingExamples)
+      saveClassifier(classifier, args(0), "20Newsgroups")
+      println("done.")
+    }
+ 
+    if (args.length == 2) {
+      println("Loading...")
+      classifier = loadClassifier(args(0), args(1), featurizer)
+    }
 
     // Evaluate
     println("Evaluating...")

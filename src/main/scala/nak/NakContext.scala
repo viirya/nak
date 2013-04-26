@@ -24,7 +24,7 @@ import nak.liblinear.LiblinearUtil._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.HashMap
 import scala.io.Source
-import java.io.{File,BufferedReader,FileReader,FileInputStream,FileOutputStream}
+import java.io.{File,BufferedReader,FileReader,InputStream,FileInputStream,FileOutputStream}
 
 import sjson.json._
 
@@ -177,33 +177,47 @@ object NakContext {
 
   }
 
-  def loadClassifier[I](path: String, classifierName: String, featurizer: Featurizer[I,String]) = {
+  def loadClassifier[I](modelFile: File, fmapFile: File, lmapFile: File, featurizer: Featurizer[I,String]): IndexedClassifier[String] with FeaturizedClassifier[String, I] = {
+ 
+    val fmapFileStream = new FileInputStream(fmapFile)
+    val lmapFileStream = new FileInputStream(lmapFile)
+ 
+    loadClassifier(modelFile, fmapFileStream, lmapFileStream, featurizer) 
+  }
+ 
+  def loadClassifier[I](path: String, classifierName: String, featurizer: Featurizer[I,String]): IndexedClassifier[String] with FeaturizedClassifier[String, I] = {
 
-    val model = Linear.loadModel(new File(path, classifierName + ".model"))
+    val modelFile = new File(path, classifierName + ".model")
+    val fmapFile = new File(path, classifierName + ".fmap")
+    val lmapFile = new File(path, classifierName + ".lmap")
 
+    loadClassifier(modelFile, fmapFile, lmapFile, featurizer) 
+  }
+ 
+  def loadClassifier[I](modelFile: File, fmapStream: InputStream, lmapStream: InputStream, featurizer: Featurizer[I,String]): IndexedClassifier[String] with FeaturizedClassifier[String, I] = {
+
+    val model = Linear.loadModel(modelFile)
+ 
     var fmapRaw = new Array[Byte](0)
     var lmapRaw = new Array[Byte](0)
-
-    val fmapFile = new FileInputStream(new File(path, classifierName + ".fmap"))
-    val lmapFile = new FileInputStream(new File(path, classifierName + ".lmap"))
 
     val serializer = Serializer.SJSON
 
     var readIn: Int = 0
     var buffer = new Array[Byte](10240)
-    readIn = fmapFile.read(buffer)
+    readIn = fmapStream.read(buffer)
     while (readIn != -1) {
         fmapRaw = Array.concat(fmapRaw, buffer.slice(0, readIn))
-        readIn = fmapFile.read(buffer)
+        readIn = fmapStream.read(buffer)
     }
-    readIn = lmapFile.read(buffer)
+    readIn = lmapStream.read(buffer)
     while (readIn != -1) {
         lmapRaw = Array.concat(lmapRaw, buffer.slice(0, readIn))
-        readIn = lmapFile.read(buffer)
+        readIn = lmapStream.read(buffer)
     }                               
 
-    fmapFile.close()
-    lmapFile.close()
+    fmapStream.close()
+    lmapStream.close()
 
     // Deal with sjson bug temporarily
 

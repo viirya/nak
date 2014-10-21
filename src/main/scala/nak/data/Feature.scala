@@ -56,7 +56,7 @@ trait Featurizer[I,O] extends (I => Seq[FeatureObservation[O]])
  * A bag-of-words featurizer that simply tokenizes the input String by using
  * whitespace and creates an observation for each token.
  */ 
-class BowFeaturizer(stopwords: Set[String] = Set[String]()) extends Featurizer[String, String] {
+class BowFeaturizer(stopwords: Set[String] = Set[String]()) extends Featurizer[String, String] with Serializable {
   def apply(raw: String) = raw
     .replaceAll("""([\?!\";\|\[\].,'])""", " $1 ")
     .trim

@@ -40,7 +40,7 @@ trait Classifier extends (Array[(Int,Double)] => Array[Double]) {
  * A classifier that knows the actual descriptions of the labels and features,
  * rather than just their indices.
  */
-trait IndexedClassifier[L] extends Classifier with LabelMap[L] with FeatureMap {
+trait IndexedClassifier[L] extends Classifier with LabelMap[L] with FeatureMap with Serializable {
 
   /**
    * Evaluate the un-indexed feature observations. Uses the feature map to
@@ -55,7 +55,7 @@ trait IndexedClassifier[L] extends Classifier with LabelMap[L] with FeatureMap {
  * A classifier that has a featurizer that allows it to be applied directly to
  * raw inputs.
  */
-trait FeaturizedClassifier[L,I] extends IndexedClassifier[L] {
+trait FeaturizedClassifier[L,I] extends IndexedClassifier[L] with Serializable {
   val featurizer: Featurizer[I,String]
 
   /**
@@ -71,7 +71,7 @@ trait FeaturizedClassifier[L,I] extends IndexedClassifier[L] {
  * 
  * @author jasonbaldridge
  */
-trait LiblinearClassifier extends IndexedClassifier[String] {
+trait LiblinearClassifier extends IndexedClassifier[String] with Serializable {
   val model: LiblinearModel 
   val lmap: Map[String, Int] 
   val fmap: Map[String, Int]
